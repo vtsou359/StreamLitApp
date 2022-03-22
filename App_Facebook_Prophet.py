@@ -62,14 +62,19 @@ periods_input = st.number_input('How many periods would you like to forecast int
 confidence_interval_input = st.number_input('Please select the confidence interval from 10% to 99%. For best results use a number from 80 to 99. ',
                                 min_value=10, max_value=99)
 """
-### Please select (if you want) a yearly, weekly or daily seasonality. Sometimes the model behaves better with the boxes unselected.
+### Please select (if you want) a yearly, monthly, weekly or daily seasonality. Sometimes the model behaves better with the boxes unselected.
 """
 yearlyseas=st.checkbox('YEARLY SEASONALITY? ', value=False)
+monthlyseas=st.checkbox('MONTHLY SEASONALITY? ', value=False)
 weeklyseas=st.checkbox('WEEKLY SEASONALITY? ', value=False)
 dailyseas=st.checkbox('DAILY SEASONALITY? ', value=False)
 
 if df is not None:
     m = Prophet(weekly_seasonality=weeklyseas, daily_seasonality=dailyseas, yearly_seasonality=yearlyseas,interval_width=(confidence_interval_input/100))
+
+    if monthlyseas==True:
+        m.add_seasonality(name='monthly', period=30.5, fourier_order=5)
+
     m.fit(data)
 
 """
