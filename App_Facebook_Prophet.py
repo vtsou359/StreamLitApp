@@ -1,4 +1,5 @@
 import streamlit as st
+import yfinance as yf
 import pandas as pd
 import numpy as np
 from fbprophet import Prophet
@@ -10,24 +11,39 @@ import base64
 st.title('📈 Automated Time Series Forecasting by Billy')
 
 """
-This data app automatically generates future forecast values from an imported dataset.
-You'll be able to import your data from a XLSX file, visualize trends and features, analyze forecast performance, and finally download the created forecast 😵 
-**In beta mode**
-
+This data app automatically generates future forecasts from stocks. The data are automatically downloaded from Yahoo Finance. 
+**Try it on MSFT with the options: data period->2y, forecast period->100, and yearly seasonality.**
+In beta mode.
 """
 
-#Created by Zach Renwick: https://twitter.com/zachrenwick
-#Code available here: https://github.com/zachrenwick/streamlit_forecasting_app
 
 """
-### Step 1: Import Data
+## Step 1: Please write the name of stock you would like to forecast as indicated in Yahoo Finance. (e.g.: for Microsoft write MSFT)
 """
-df = st.file_uploader(
-    'Import the time series xlsx file here. Columns must be labeled ds and y and sorted from the oldest time value to the newest. The input to Prophet is always a dataframe with two columns: ds and y. The ds (datestamp) column should be of a format expected by Pandas, ideally YYYY-MM-DD for a date or YYYY-MM-DD HH:MM:SS for a timestamp. The y column must be numeric, and represents the measurement we wish to forecast.',
-    type='xlsx')
+stock_name=st.text_input("Enter the name/symbol of the stock here", value="MSFT")
+period_select = st.select_slider(
+     'Select the data period that will feed the model',
+     options=['1mo', '3mo', '6mo', '1y', '2y', '5y','10y','ytd','max'])
+
+msft = yf.Ticker(stock_name)
+# get historical market data
+hist = msft.history(period=period_select)
+hist['ds'] = hist.index
+
+df=hist[['Close']]
+df=df.reset_index()
+df=df.rename(columns = {'Date':'ds', 'Close':'y'})
+data=df
+
+#df = st.file_uploader(
+    #'Import the time series xlsx file here. Columns must be labeled ds (time)  and y (values) and sorted from the oldest time value to the newest. The ds column should be of a format DATE in excel. The y column must be numeric, and represents the measurement we wish to forecast.',
+    #type='xlsx')
+
+
+
 #encoding='auto'
 if df is not None:
-    data = pd.read_excel(df)
+    #data = pd.read_excel(df)
     data['ds'] = pd.to_datetime(data['ds'], errors='coerce')
 
     st.write(data)
@@ -36,15 +52,24 @@ if df is not None:
     # st.write(max_date)
 
 """
-### Step 2: Select Forecast Horizon
+## Step 2: Select Forecast Horizon
 Keep in mind that forecasts become less accurate with larger forecast horizons.
 """
 
-periods_input = st.number_input('How many periods would you like to forecast into the future?',
-                                min_value=1, max_value=365)
+periods_input = st.number_input('How many periods would you like to forecast into the future? (min=1 and max=3650->(10 years))',
+                                min_value=1, max_value=3650)
+
+confidence_interval_input = st.number_input('Please select the confidence interval from 10% to 99%. For best results use a number from 80 to 99. ',
+                                min_value=10, max_value=99)
+"""
+### Please select (if you want) a yearly, weekly or daily seasonality. Sometimes the model behaves better with the boxes unselected.
+"""
+yearlyseas=st.checkbox('YEARLY SEASONALITY? ', value=False)
+weeklyseas=st.checkbox('WEEKLY SEASONALITY? ', value=False)
+dailyseas=st.checkbox('DAILY SEASONALITY? ', value=False)
 
 if df is not None:
-    m = Prophet()
+    m = Prophet(weekly_seasonality=weeklyseas, daily_seasonality=dailyseas, yearly_seasonality=yearlyseas,interval_width=(confidence_interval_input/100))
     m.fit(data)
 
 """
