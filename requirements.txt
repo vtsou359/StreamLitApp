@@ -6,3 +6,4 @@ matplotlib
 plotly==4.14.3
 fbprophet==0.7.1
 openpyxl
+yfinance
